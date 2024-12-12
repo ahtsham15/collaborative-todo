@@ -5,6 +5,7 @@ except ImportError:
     # from django.contrib.auth.models import User
     from tasks.models.userModel import User
     from django.contrib.auth.hashers import make_password
+    from tasks.models.taskListModel import TaskList
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,3 +31,18 @@ class LoginSerializer(serializers.ModelSerializer):
     password = serializers.CharField(required=True)
     # class Meta:
     #     model = User
+
+class TaskListSerializer(serializers.ModelSerializer):
+    # shared_with = serializers.PrimaryKeyRelatedField(many=True, required=False, queryset=User.objects.all())
+    
+    class Meta:
+        model = TaskList
+        fields = ['id','name','created_by','created_at']
+
+    def create(self, validated_data):
+        task_list = TaskList(
+            name = validated_data['name'],
+            created_by = validated_data['created_by']
+        )
+        task_list.save()
+        return task_list
