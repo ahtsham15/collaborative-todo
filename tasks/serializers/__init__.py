@@ -6,6 +6,8 @@ except ImportError:
     from tasks.models.userModel import User
     from django.contrib.auth.hashers import make_password
     from tasks.models.taskListModel import TaskList
+    from tasks.models.taskModel import Task
+    from tasks.models.taskDoModel import TaskDo
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -46,3 +48,32 @@ class TaskListSerializer(serializers.ModelSerializer):
         )
         task_list.save()
         return task_list
+
+class TaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ['id','title','description','is_completed','list']
+
+    def create(self, validated_data):
+        task = Task(
+            title = validated_data['title'],
+            description = validated_data['description'],
+            is_completed = validated_data['is_completed'],
+            list = validated_data['list']
+        )
+        task.save()
+        return task
+    
+class TaskDoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TaskDo
+        fields = ['id', 'title', 'description', 'is_completed']
+    
+    def create(self, validated_data):
+        task_do = TaskDo(
+            title=validated_data['title'],
+            description=validated_data['description'],
+            is_completed=validated_data['is_completed']
+        )
+        task_do.save()
+        return task_do
