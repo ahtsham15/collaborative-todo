@@ -37,7 +37,7 @@ class TaskListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = TaskList
-        fields = ['id','name','created_by','created_at']
+        fields = ['id','name','created_by','shared_with','created_at']
 
     def create(self, validated_data):
         task_list = TaskList(
