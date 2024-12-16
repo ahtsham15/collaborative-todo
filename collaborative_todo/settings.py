@@ -34,6 +34,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -80,8 +82,20 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'collaborative_todo.wsgi.application'
+# WSGI_APPLICATION = 'collaborative_todo.wsgi.application'
 
+ASGI_APPLICATION = 'collaborative_todo.asgi.application'
+
+
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],  # Replace with your Redis server details
+        },
+    },
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
