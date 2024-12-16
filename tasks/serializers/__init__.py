@@ -2,7 +2,6 @@ try:
     from .userSerializer import UserSerializer, LoginSerializer
 except ImportError:
     from rest_framework import serializers
-    # from django.contrib.auth.models import User
     from tasks.models.userModel import User
     from django.contrib.auth.hashers import make_password
     from tasks.models.taskListModel import TaskList
@@ -67,13 +66,15 @@ class TaskSerializer(serializers.ModelSerializer):
 class TaskDoSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskDo
-        fields = ['id', 'title', 'description', 'is_completed']
-    
+        fields = ['id', 'title', 'description', 'is_completed','task_list','due_date']
+
     def create(self, validated_data):
         task_do = TaskDo(
             title=validated_data['title'],
             description=validated_data['description'],
-            is_completed=validated_data['is_completed']
+            is_completed=validated_data.get('is_completed', False),
+            task_list=validated_data['task_list'],
+            due_date=validated_data['due_date', False]
         )
         task_do.save()
         return task_do
