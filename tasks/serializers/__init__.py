@@ -38,12 +38,13 @@ class TaskListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = TaskList
-        fields = ['id','name','created_by','shared_with','created_at']
+        fields = ['id','name','created_by','shared_with','created_at','description']
 
     def create(self, validated_data):
         task_list = TaskList(
             name = validated_data['name'],
-            created_by = validated_data['created_by']
+            created_by = validated_data['created_by'],
+            description = validated_data['description']
         )
         task_list.save()
         return task_list
@@ -67,7 +68,7 @@ class TaskDoSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskDo
         fields = ['id', 'title', 'description', 'is_completed','task_list','due_date']
-
+    
     def create(self, validated_data):
         task_do = TaskDo(
             title=validated_data['title'],

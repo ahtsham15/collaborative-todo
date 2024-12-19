@@ -37,6 +37,8 @@ class TaskListView(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             shared_with_users = User.objects.filter(id__in=shared_with)
+            shared_usernames = [user.username for user in shared_with_users]
+            print("Shared usernames:", shared_usernames)
             if len(shared_with_users) != len(shared_with):
                 return Response({
                     "status": "error",
@@ -47,13 +49,18 @@ class TaskListView(APIView):
             if serializer.is_valid():
                 task_list = serializer.save()
                 task_list.shared_with.set(shared_with_users)
+                # shared_users_data = task_list.shared_with.all().values('id', 'username', 'email')
+                # print("Task List shared with users details:", list(shared_users_data))
                 task_list.save()
+                serializer_data = serializer.data.copy()
+                serializer_data['shared_with'] = shared_usernames
+                print("serializer data: ", serializer_data)
                 room_name = "test_consumer_group"
-                send_task_update_message(room_name, {"message": "Task list created", "data": serializer.data})
+                send_task_update_message(room_name, {"message": "Task list created", "data": serializer_data})
                 serializer = TaskListSerializer(task_list)
                 return Response({
                     "status": "success",
-                    "data": serializer.data
+                    "data": serializer_data
                 }, status=status.HTTP_201_CREATED)
             else:
                 return Response({
@@ -185,52 +192,43 @@ class TaskListDetailView(APIView):
         if not request.user.is_authenticated:
             return Response({
                 "status": "error",
-                "message": "Access token not provided or invalid"
+                "message": "Access token not provided or invalid" 
             }, status=status.HTTP_401_UNAUTHORIZED)
-    
+
         try:
             user_id = request.user.id
             user_obj = get_object_or_404(User, id=user_id)
-            taskList = TaskList.objects.get(id=pk, created_by=user_id)
-        
-            if taskList:
-                # Ensure that all related tasks are deleted first
-                Task.objects.filter(list=taskList).delete()
-
-                # Delete the task list
-                taskList.delete()
-
-                # Optionally, send a WebSocket update if needed (this part is commented out in your code)
-                # channel_layer = get_channel_layer()
-                # room_name = "task_list_{}".format(pk)
-                # async_to_sync(channel_layer.group_send)(
-                #     room_name,
-                #     {
-                #         "type": "task_update",
-                #         "message": "Task list deleted successfully"
-                #     }
-                # )
-
+            
+            try:
+                task_list = TaskList.objects.get(id=pk, created_by=user_id)
+                print("Task List: ",task_list)
+            except TaskList.DoesNotExist:
                 return Response({
-                    "status": "success",
-                    "message": "Task list deleted successfully"
-                }, status=status.HTTP_200_OK)
+                    "status": "error",
+                    "message": "Task list not found"
+                }, status=status.HTTP_404_NOT_FOUND)
 
-        except TaskList.DoesNotExist:
+            # First clear all shared_with relationships
+            task_list.shared_with.clear()
+
+            # Then delete the task list itself
+            task_list.delete()
+
+            # Send websocket notification about deletion
+            room_name = "test_consumer_group"
+            send_task_update_message(room_name, {
+                "message": "Task list deleted",
+                "task_list_id": pk
+            })
+
             return Response({
-                "status": "error",
-                "message": "Task list not found"
-            }, status=status.HTTP_404_NOT_FOUND)
-    
-        except IntegrityError:
-            # Handle the case where deleting task list fails due to foreign key constraints
-            return Response({
-                "status": "error",
-                "message": "Cannot delete task list because there are related tasks"
-            }, status=status.HTTP_400_BAD_REQUEST)
+                "status": "success",
+                "message": "Task list and all its relations deleted successfully"
+            }, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({
-                "status": "error",
+                "status": "error", 
                 "message": f"Error: {e}"
             }, status=status.HTTP_400_BAD_REQUEST)
+        
