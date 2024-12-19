@@ -68,14 +68,14 @@ class TaskDoSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskDo
         fields = ['id', 'title', 'description', 'is_completed','task_list','due_date']
-    
+
     def create(self, validated_data):
         task_do = TaskDo(
             title=validated_data['title'],
             description=validated_data['description'],
             is_completed=validated_data.get('is_completed', False),
             task_list=validated_data['task_list'],
-            due_date=validated_data['due_date', False]
+            due_date=validated_data['due_date']
         )
         task_do.save()
         return task_do
