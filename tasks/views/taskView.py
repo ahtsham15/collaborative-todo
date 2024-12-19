@@ -35,7 +35,8 @@ class TaskDoView(APIView):
             try:
                 task_list_id = data.get("task_list")
                 if task_list_id:
-                    TaskList.objects.get(id=task_list_id)
+                    taskList = TaskList.objects.get(id=task_list_id)
+                    print("TasK List: ", taskList.name)
             except TaskList.DoesNotExist:
                 return Response(
                     {
@@ -47,12 +48,14 @@ class TaskDoView(APIView):
 
             print("data: ", data)
             serializer = TaskDoSerializer(data=data)
-            print("serializer initial data: ", serializer.initial_data)
             if serializer.is_valid():
                 task = serializer.save()
+                serializer_data = serializer.data.copy()
+                serializer_data["task_list"] = taskList.name
+                print("serializer_data: ", serializer_data)
                 room_name = "test_consumer_group"
                 send_task_update_message(
-                    room_name, {"message": "Task created", "data": serializer.data}
+                    room_name, {"message": "Task created", "data": serializer_data}
                 )
                 return Response(
                     {"status": "success", "data": serializer.data},
@@ -131,6 +134,43 @@ class TaskDoViewDetail(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+    def patch(self, request, id):
+        if not request.user.is_authenticated:
+            return Response(
+                {"status": "error", "message": "Access token not provided or invalid"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            print(request.user.id)
+            user_id = request.user.id
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response(
+                    {"status": "error", "message": "User not found"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            try:
+                task = TaskDo.objects.get(id=id)
+            except TaskDo.DoesNotExist:
+                return Response({
+                    "status":"error",
+                    "message":"Task not found"
+                },status=status.HTTP_400_BAD_REQUEST)
+            print("The task is", task)
+            serializer = TaskDoSerializer(task, data=request.data, partial=True)
+            if serializer.is_valid():
+                return Response({
+                    "status":"sccuess",
+                    "message":'Task is updated',
+                    "data":serializer.data
+                },status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"status": "error", "message": f"An error occured: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     def delete(self, request, id):
         if not request.user.is_authenticated:
             return Response(
@@ -140,6 +180,12 @@ class TaskDoViewDetail(APIView):
         try:
             task = TaskDo.objects.get(id=id)
             if task:
+                room_name = "test_consumer_group"
+                serializer = TaskDoSerializer(task)
+                send_task_update_message(
+                    room_name,
+                    {"message": "Task Delete Successfully", "data": serializer.data},
+                )
                 task.delete()
                 return Response(
                     {"status": "success", "message": "Task deleted successfully"},
